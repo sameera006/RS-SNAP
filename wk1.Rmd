@@ -1,0 +1,177 @@
+---
+title: "wk1"
+output: html_document
+date: "2024-01-25"
+---
+
+#We start with Loading the packages for reading the raster data
+
+```{r}
+library(sf)
+library(terra)
+library(raster)
+```
+#Reading the shape file of Landsat polygons of different Land Classification
+
+```{r}
+bare_earth <- st_read("Data/shapefile-landsat/bare_earth_Polygon.shp")
+```
+```{r}
+grass <- st_read("Data/shapefile-landsat/Grass_Polygon.shp")
+forest <- st_read("Data/shapefile-landsat/Forest_Polygon.shp")
+urban <- st_read("Data/shapefile-landsat/urban_Polygon.shp")
+high_urban <- st_read("Data/shapefile-landsat/high_urban_Polygon.shp")
+```
+**Reading data for Sentinel Shapefile
+
+```{r}
+bare_earth <- st_read("Data/shapefile-sentinel/bare_earth_Polygon.shp")
+grass <- st_read("Data/shapefile-sentinel/Grass_Polygon.shp")
+forest <- st_read("Data/shapefile-sentinel/Forest_Polygon.shp")
+urban <- st_read("Data/shapefile-sentinel/urban_Polygon.shp")
+high_urban <- st_read("Data/shapefile-sentinel/high_urban_Polygon.shp")
+```
+
+```{r}
+#Landsat equivalent
+bands <- c("1","2", "3", "4", "5", "6", "7")
+
+sentinel <- rast("Data/sentinel-tiff/LC09_L2SP_175083_20231206_20231207_02_T1.tif")
+
+#names(sentinel) <- bands
+  
+landsat<-rast("Data/landsat-tiff/subset_LC09_L2SP_175083_20231206_20231207_02_T1.tif")
+
+names(landsat) <- bands
+```
+
+Here i have chosen to use terra, this is because i want to extract the pixel values from within the polygons and at the moment stars will only permit aggregation - e.g. the mean of the pixels in the polygons. 
+
+To use a vector layer in terra it needs to be in a SpatVector (in terra the raster is a SpatRaster)…
+
+```{r}
+urban <- vect(urban)
+```
+
+```{r}
+bare_earth <- st_read("Data/shapefile-landsat/bare_earth_Polygon.shp") %>%
+  vect()
+grass <- st_read("Data/shapefile-landsat/Grass_Polygon.shp")%>%
+    vect()
+forest <- st_read("Data/shapefile-landsat/Forest_Polygon.shp")%>%
+    vect()
+urban <- st_read("Data/shapefile-landsat/urban_Polygon.shp")%>%
+    vect()
+high_urban <- st_read("Data/shapefile-landsat/high_urban_Polygon.shp")%>%
+    vect()
+```
+Check the CRS
+
+```{r}
+crs(landsat)
+crs(sentinel)
+
+# reproject landsat
+landsat <- project(landsat, sentinel)
+```
+```{r}
+library(tidyverse)
+```
+Now let’s pull out those values, and get the mean and standard deviation, starting with urban from sentinel data…
+
+```{r}
+# extract the values from sentinel for urban landcover
+sen_urban<- terra::extract(sentinel, urban, progress = F)%>%
+  # make to tibble
+  as_tibble()%>%
+  # columns are bands so pivot all the bands (2 to 7) longer
+  # giving a column of band number and another of band values
+  pivot_longer(cols = 2:7, 
+               names_to="bands", 
+               values_to="band_values")%>%
+  # add a column to identify this as sentinel
+  add_column(sensor="sentinel")%>%
+  # add column to identify as urban
+  add_column(land="urban")
+```
+
+```{r}
+band_fun <- function(sensor, landcover) {
+  col_sensor <- deparse(substitute(sensor))
+  col_land <- deparse(substitute(landcover))
+
+  sen_urban<- terra::extract(sensor, landcover, progress = F)%>%
+    as_tibble()%>%
+    pivot_longer(cols = 2:7, 
+               names_to="bands", 
+               values_to="band_values")%>%
+    add_column(sensor=col_sensor)%>%
+    add_column(land=col_land)
+                 
+}
+```
+
+```{r}
+band_fun_all_values <- function(sensor, landcover) {
+  col_sensor <- deparse(substitute(sensor))
+  col_land <- deparse(substitute(landcover))
+
+  sen_urban<- terra::extract(sensor, landcover, progress = F)%>%
+    as_tibble()%>%
+    pivot_longer(cols = 2:7, 
+               names_to="bands", 
+               values_to="band_values")
+                 
+}
+```
+
+```{r}
+sen_bare <- band_fun(sentinel, bare_earth)
+sen_grass<- band_fun(sentinel, grass) 
+sen_forest<- band_fun(sentinel, forest) 
+sen_high_urban <- band_fun(sentinel, high_urban) 
+
+lsat_urban<- band_fun(landsat, urban)
+lsat_bare<- band_fun(landsat, bare_earth)
+lsat_grass<- band_fun(landsat, grass)
+lsat_forest<- band_fun(landsat, forest)
+lsat_high_urban <- band_fun(sentinel, high_urban) 
+```
+
+```{r}
+sen_lsat <- bind_rows(sen_urban, sen_bare, sen_grass,
+                      sen_forest, sen_high_urban,
+                      lsat_urban, lsat_bare, lsat_grass,
+                      lsat_forest, lsat_high_urban)
+```
+
+get the mean (and standard deviation) values for each band per sensor and land cover type:
+
+```{r}
+means<- sen_lsat%>%
+  group_by(bands, sensor, land)%>%
+  summarise(Mean=mean(band_values), Std=sd(band_values))
+```
+```{r}
+p1 <- means %>%
+  filter(sensor=="sentinel") %>%
+  ggplot(., aes(x = bands, y = Mean,
+                col=land))+
+  geom_point()+
+  geom_line(aes(group = land)) +
+  geom_errorbar(aes(ymin = (Mean-Std), ymax = (Mean+Std), width = 0.2))
+p1
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
