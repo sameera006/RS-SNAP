@@ -16,21 +16,16 @@ library(raster)
 ```{r}
 bare_earth <- st_read("Data/shapefile-landsat/bare_earth_Polygon.shp")
 ```
+
 ```{r}
 grass <- st_read("Data/shapefile-landsat/Grass_Polygon.shp")
 forest <- st_read("Data/shapefile-landsat/Forest_Polygon.shp")
 urban <- st_read("Data/shapefile-landsat/urban_Polygon.shp")
 high_urban <- st_read("Data/shapefile-landsat/high_urban_Polygon.shp")
 ```
-**Reading data for Sentinel Shapefile
+**we do not need to add the shapefiles for sentinel as they are in the same area not different**
 
-```{r}
-bare_earth <- st_read("Data/shapefile-sentinel/bare_earth_Polygon.shp")
-grass <- st_read("Data/shapefile-sentinel/Grass_Polygon.shp")
-forest <- st_read("Data/shapefile-sentinel/Forest_Polygon.shp")
-urban <- st_read("Data/shapefile-sentinel/urban_Polygon.shp")
-high_urban <- st_read("Data/shapefile-sentinel/high_urban_Polygon.shp")
-```
+
 
 ```{r}
 #Landsat equivalent
