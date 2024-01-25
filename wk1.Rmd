@@ -163,6 +163,49 @@ p1 <- means %>%
 p1
 ```
 
+```{r}
+p2 <- sen_lsat %>%
+  filter(sensor=="sentinel") %>%
+ggplot(., aes(x=band_values, group=land, fill=land)) + 
+  geom_density(alpha = 0.6)+
+#Add a mean vertical line
+  geom_vline(data = . %>% group_by(land) %>% summarise(group_mean = mean(band_values)),
+             aes(xintercept=group_mean, color = land), linetype="dashed", size=1)
+```
+```{r}
+p2
+```
+
+```{r}
+install.packages("cowplot")
+library(cowplot)
+```
+```{r}
+output<-plot_grid(p1, p2, labels = c('A', 'B'), label_size = 12, ncol=1)
+
+output
+```
+
+```{r}
+ggsave("spectral_reflectance.pdf", width = 20, height = 20, units = "cm")
+```
+
+```{r}
+t1<- sen_lsat %>%
+           filter(sensor=="sentinel" & land =="urban")%>%
+           select(band_values)%>%
+           pull()
+
+t2<- sen_lsat %>%
+           filter(sensor=="landsat" & land =="urban")%>%
+           select(band_values)%>%
+           pull()
+
+t.test(t1, t2)
+```
+
+
+
 
 
 
