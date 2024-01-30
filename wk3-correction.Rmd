@@ -1,0 +1,55 @@
+---
+title: "wk3-Corrections"
+output: html_document
+date: "2024-01-30"
+---
+##ATMOSPHERIC CORRECTION
+CHECKING THE DIGITAL NUMBER
+
+```{r}
+
+library(terra)
+library(raster)
+install.packages("RStoolbox")
+library(RStoolbox)
+
+library(tidyverse)
+library(fs)
+library(rgdal)
+
+## Import meta-data and bands based on MTL file
+# MUST BE LEVEL 1 not LEVEL 2 - see more info later.
+mtlFile  <- ("Data/LC08_L1TP_175083_20240115_20240124_02_T1_MTL.txt")
+mtlFile
+             
+```
+```{r}
+metaData <- readMeta(mtlFile)
+
+```
+```{r}
+lsatMeta  <- stackMeta(metaData)
+```
+
+
+
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
