@@ -6,29 +6,53 @@ date: "2024-01-30"
 ##ATMOSPHERIC CORRECTION
 CHECKING THE DIGITAL NUMBER
 
+we have taken two imagery for the study area overlapping with each other.
+
+#merging Imagery (LANDSAT 8 & LANDSAT 9)
+
+**LANDSAT 8**
+
 ```{r}
-
-library(terra)
-library(raster)
-install.packages("RStoolbox")
-library(RStoolbox)
-
 library(tidyverse)
+library(terra)
 library(fs)
-library(rgdal)
 
-## Import meta-data and bands based on MTL file
-# MUST BE LEVEL 1 not LEVEL 2 - see more info later.
-mtlFile  <- ("Data/LC08_L1TP_175083_20240115_20240124_02_T1_MTL.txt")
-mtlFile
-             
+# List your raster files excluding band 8 using the patter argument
+listlandsat_8<-dir_info(here::here("Data", "week3", "LC08_L2SP_175084_20240115_20240124_02_T1"))%>%
+  dplyr::filter(str_detect(path, "[B123456790].TIF")) %>%
+  dplyr::select(path)%>%
+  pull()%>%
+  as.character()%>%
+  # Load our raster layers into a stack
+  terra::rast()
 ```
-```{r}
-metaData <- readMeta(mtlFile)
 
-```
+**LANDSAT 9**
+
 ```{r}
-lsatMeta  <- stackMeta(metaData)
+# List your raster files excluding band 8 using the patter argument
+listlandsat_9<-dir_info(here::here("Data", "week3", "LC09_L2SP_175083_20240123_20240124_02_T1"))%>%
+  dplyr::filter(str_detect(path, "[1B23456790].TIF")) %>%
+  dplyr::select(path)%>%
+  pull()%>%
+  as.character()%>%
+  # Load our raster layers into a stack
+  terra::rast()
+```
+
+```{r}
+m1 <- terra::mosaic(listlandsat_8, listlandsat_9, fun="mean")
+```
+#Enhancements
+Ratioing is the difference between two spectral bands that have a certain spectral response meaning it is easier to identify a certain landscape feature…for example…NDVI
+
+The **Normalised Difference Vegetation Index** is based on the fact that healthy and green vegetation reflects more in the NIR but absorbs in the Red wavelength
+
+```{r}
+m1_NDVI <- (m1$LC08_L2SP_175084_20240115_20240124_02_T1_SR_B5 - m1$LC08_L2SP_175084_20240115_20240124_02_T1_SR_B4 ) / (m1$LC08_L2SP_175084_20240115_20240124_02_T1_SR_B5 + m1$LC08_L2SP_175084_20240115_20240124_02_T1_SR_B4)
+
+m1_NDVI %>%
+  plot(.)
 ```
 
 
