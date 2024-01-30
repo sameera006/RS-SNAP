@@ -54,11 +54,31 @@ m1_NDVI <- (m1$LC08_L2SP_175084_20240115_20240124_02_T1_SR_B5 - m1$LC08_L2SP_175
 m1_NDVI %>%
   plot(.)
 ```
+We can reclassify this to pull out certain areas, for example, only where NDVI is equal to or greater than 0.2
+
+```{r}
+veg <- m1_NDVI %>%
+  # cbind = combine dataframes, or here or values listed
+  terra::classify(., cbind(-Inf, 0.2, NA))
+
+veg %>%
+  plot(.)
+```
+
+#FILTERING
+Filtering refers to any kind of moving window operation to our data which can be saved as a separate raster file.
+
+```{r}
+# for a 3 by 3 filter on 1 band, w means the window and 3 means a 3 by 3 square.
+
+m1_filter <- terra::focal(m1$LC08_L2SP_175084_20240115_20240124_02_T1_SR_B4, w=3)
+```
+# TEXTURE
 
 
 
 
-## R Markdown
+
 
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
