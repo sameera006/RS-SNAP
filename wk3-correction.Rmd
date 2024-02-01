@@ -1,6 +1,8 @@
 ---
 title: "wk3-Corrections"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 date: "2024-01-30"
 ---
 ##ATMOSPHERIC CORRECTION
@@ -74,26 +76,98 @@ Filtering refers to any kind of moving window operation to our data which can be
 m1_filter <- terra::focal(m1$LC08_L2SP_175084_20240115_20240124_02_T1_SR_B4, w=3)
 ```
 # TEXTURE
+For the purposes of this part of the practical i have made a study area polygon in QGIS that i will use to clip my raster to, in order to reduce processing time.
 
+```{r}
+library(sf)
 
+study_area <- st_read("Data/week3/study_area/study_area_wk3.shp")%>%
+  st_transform(., 32634)
+  
+m1_clip<-m1%>%
+  terra::crop(., study_area)%>%
+  terra::mask(., study_area)
+```
+```{r}
+install.packages("GLCMTextures")
+library(GLCMTextures)
 
+scale <-(m1_clip*0.0000275) + -0.2
 
+textures1<- glcm_textures(
+  scale$LC08_L2SP_175084_20240115_20240124_02_T1_SR_B4,
+  # size of window
+  w = c(7,7),
+  # levels means divide the data into 4 "bins" e.g. a range of 0-20
+  # would be 0-5, 5-10, 10-15,15-20
+  n_levels = 4,
+  # raster data might not be grater than 0
+  # convert it to a discrete number of grey levels (e.g. 4)
+  quantization = "equal range",
+  #co-occurence (second order) matrix (1,0) = one pixel to the right
+  # default is all directions as below
+  shift = list(c(1, 0), c(1, 1), c(0, 1), c(-1, 1)),
+  # select what we want
+  metrics="glcm_homogeneity") 
 
+plot(textures1)
+```
+#Data fusion
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+data fusion is appending new raster data to the existing data or making a new raster dataset with different bands…here we can do this with the texture measure we have created (and the original spectral data if you wish). 
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+```{r}
+# we can just use the c function to combine rasters in terra
 
-```{r cars}
-summary(cars)
+raster_and_texture <- c(m1_clip, textures1)
 ```
 
-## Including Plots
+#PCA
 
-You can also embed plots, for example:
+**Principal Component Analysis** is designed to 
+reduce the dimensionality of our data.
+Transform multi-spectral data into uncorrelated and smaller dataset
+Keep most of the original information
+The first component will (should) capture most of the variance within the dataset
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+pca <- prcomp(as.data.frame(raster_and_texture, na.rm=TRUE), 
+              center=TRUE, 
+              scale=TRUE)
+
+summary(pca)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+If we were just to print pca then this would give us the “loadings” - the covariances/correlations between the original variables and the new principal components. We can also get rotations pca$rotatation which is adjustment of the locations on a plot. A common method is varimax which adjusts the rotations to make loading high or zero. Imagine a 3D plot and trying to move around the plot to line the data up we have maximum variance on the x-axis. 
+
+A benefit of PCA is that it takes advantage of multicollinearity and makes new variables that are not correlated
+
+```{r}
+x <- predict(raster_and_texture, pca)
+plot(x)
+```
+#glcm
+
+```{r}
+install.packages("glcm")
+library(glcm)
+library(raster)
+
+band4_raster<-raster::raster(m1$LC08_L2SP_175084_20240115_20240124_02_T1_SR_B4)
+
+glcm <- glcm(band4_raster,
+                   window = c(7, 7),
+                   #shift=list(c(0,1), c(1,1), c(1,0), c(1,-1)), 
+                   statistics = c("homogeneity"))
+
+glcm$glcm_homogeneity %>%
+  plot(.)
+```
+
+
+
+
+
+
+
+
